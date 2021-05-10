@@ -53,6 +53,7 @@
 
 #include <fastdds/rtps/resources/ResourceEvent.h>
 #include <fastdds/rtps/resources/AsyncWriterThread.h>
+#include "../flowcontrol/FlowControllerFactory.hpp"
 
 #include <statistics/rtps/StatisticsBase.hpp>
 
@@ -96,7 +97,6 @@ class ReaderHistory;
 class ReaderListener;
 class StatefulReader;
 class PDPSimple;
-class FlowController;
 class IPersistenceService;
 class WLP;
 
@@ -338,11 +338,6 @@ public:
     inline RTPSParticipant* getUserRTPSParticipant()
     {
         return mp_userParticipant;
-    }
-
-    std::vector<std::unique_ptr<FlowController>>& getFlowControllers()
-    {
-        return m_controllers;
     }
 
     /*!
@@ -626,9 +621,9 @@ private:
     bool is_intraprocess_only_;
 
     /*
-     * Flow controllers for this participant.
+     * Flow controller factory.
      */
-    std::vector<std::unique_ptr<FlowController>> m_controllers;
+    fastdds::rtps::FlowControllerFactory flow_controller_factory_;
 
 #if HAVE_SECURITY
     security::ParticipantSecurityAttributes security_attributes_;

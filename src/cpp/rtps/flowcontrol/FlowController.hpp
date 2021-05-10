@@ -4,11 +4,16 @@
 #include <chrono>
 
 namespace eprosima {
-namespace fastdds {
-namespace rtps {
 
+namespace fastrtps {
+namespace rtps {
 class RTPSWriter;
 struct CacheChange_t;
+} // namespace rtps
+} // namespace fastrtps
+
+namespace fastdds {
+namespace rtps {
 
 /*!
  * Interface used by writers to control the usage of network bandwidth.
@@ -29,7 +34,7 @@ public:
      * @param writer Pointer to the writer to be registered. Cannot be nullptr.
      */
     virtual void register_writer(
-            RTPSWriter* writer) = 0;
+            fastrtps::rtps::RTPSWriter* writer) = 0;
 
     /*!
      * Unregister a writer.
@@ -37,7 +42,7 @@ public:
      * @param writer Pointer to the writer to be unregistered. Cannot be nullptr.
      */
     virtual void unregister_writer(
-            RTPSWriter* writer) = 0;
+            fastrtps::rtps::RTPSWriter* writer) = 0;
 
     /*!
      * Adds the CacheChange_t to be managed by this object.
@@ -50,8 +55,8 @@ public:
      * @return true if sample could be added. false in other case.
      */
     virtual bool add_new_sample(
-            RTPSWriter* writer,
-            CacheChange_t* change,
+            fastrtps::rtps::RTPSWriter* writer,
+            fastrtps::rtps::CacheChange_t* change,
             const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time) = 0;
 
     /*!
@@ -64,8 +69,8 @@ public:
      * @return true if sample could be added. false in other case.
      */
     virtual bool add_old_sample(
-            RTPSWriter* writer,
-            CacheChange_t* change) = 0;
+            fastrtps::rtps::RTPSWriter* writer,
+            fastrtps::rtps::CacheChange_t* change) = 0;
 
     /*!
      * If currently the CacheChange_t is managed by this object, remove it.
@@ -74,8 +79,9 @@ public:
      * @param Pointer to the change which should be removed if it is currently managed by this object.
      */
     virtual void remove_change(
-            CacheChange_t* change);
+            fastrtps::rtps::CacheChange_t* change);
 };
+
 } // namespace rtps
 } // namespace fastdds
 } // namespace eprosima

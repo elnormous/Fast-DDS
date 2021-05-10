@@ -23,6 +23,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <sstream>
 
 #include <rtps/flowcontrol/ThroughputController.h>
 #include <rtps/persistence/PersistenceService.h>
@@ -146,6 +147,28 @@ RTPSParticipantImpl::RTPSParticipantImpl(
     , is_intraprocess_only_(should_be_intraprocess_only(PParam))
     , has_shm_transport_(false)
 {
+    // Initialize flow controller factory.
+    flow_controller_factory_.init();
+
+    // Register user's flow controllers.
+    for (auto flow_controller_desc : m_att.flow_controllers)
+    {
+        flow_controller_factory_.register_flow_controller(*flow_controller_desc.get());
+    }
+
+    // Support old API
+    if (PParam.throughputController.bytesPerPeriod != UINT32_MAX && PParam.throughputController.periodMillisecs != 0)
+    {
+        std::stringstream guid_sstr;
+        guid_sstr << m_guid;
+        std::string guid_str = guid_sstr.str();
+        fastdds::rtps::FlowControllerDescriptor old_descriptor;
+        old_descriptor.name = guid_str.c_str();
+        old_descriptor.max_bytes_per_period = PParam.throughputController.bytesPerPeriod;
+        old_descriptor.period_ms = PParam.throughputController.periodMillisecs;
+        flow_controller_factory_.register_flow_controller(old_descriptor);
+    }
+
     // Builtin transports by default
     if (PParam.useBuiltinTransports)
     {
@@ -228,13 +251,6 @@ RTPSParticipantImpl::RTPSParticipantImpl(
     if (!networkFactoryHasRegisteredTransports())
     {
         return;
-    }
-
-    // Throughput controller, if the descriptor has valid values
-    if (PParam.throughputController.bytesPerPeriod != UINT32_MAX && PParam.throughputController.periodMillisecs != 0)
-    {
-        std::unique_ptr<FlowController> controller(new ThroughputController(PParam.throughputController, this));
-        m_controllers.push_back(std::move(controller));
     }
 
     /* If metatrafficMulticastLocatorList is empty, add mandatory default Locators
@@ -678,13 +694,6 @@ bool RTPSParticipantImpl::create_writer(
         m_userWriterList.push_back(SWriter);
     }
     *writer_out = SWriter;
-
-    // If the terminal throughput controller has proper user defined values, instantiate it
-    if (param.throughputController.bytesPerPeriod != UINT32_MAX && param.throughputController.periodMillisecs != 0)
-    {
-        std::unique_ptr<FlowController> controller(new ThroughputController(param.throughputController, SWriter));
-        SWriter->add_flow_controller(std::move(controller));
-    }
 
 #ifdef FASTDDS_STATISTICS
 

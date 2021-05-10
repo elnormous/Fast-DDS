@@ -779,15 +779,7 @@ void StatefulWriter::send_any_unsent_changes()
     }
     else
     {
-        bool no_flow_controllers = m_controllers.empty() && mp_RTPSParticipant->getFlowControllers().empty();
-        if (no_flow_controllers || !there_are_remote_readers_)
-        {
-            send_all_unsent_changes(max_sequence, activateHeartbeatPeriod);
-        }
-        else
-        {
-            send_unsent_changes_with_flow_control(max_sequence, activateHeartbeatPeriod);
-        }
+        send_all_unsent_changes(max_sequence, activateHeartbeatPeriod);
     }
 
     if (activateHeartbeatPeriod)
@@ -1277,18 +1269,6 @@ void StatefulWriter::send_unsent_changes_with_flow_control(
         remoteReader->for_each_unsent_change(max_sequence, unsent_change_process);
     }
 
-    // Clear all relevant changes through the local controllers first
-    for (std::unique_ptr<FlowController>& controller : m_controllers)
-    {
-        (*controller)(relevantChanges);
-    }
-
-    // Clear all relevant changes through the parent controllers
-    for (std::unique_ptr<FlowController>& controller : mp_RTPSParticipant->getFlowControllers())
-    {
-        (*controller)(relevantChanges);
-    }
-
     try
     {
         uint32_t lastBytesProcessed = 0;
@@ -1316,7 +1296,6 @@ void StatefulWriter::send_unsent_changes_with_flow_control(
             // TODO(Ricardo) Flowcontroller has to be used in RTPSMessageGroup. Study.
             // And controllers are notified about the changes being sent
             auto change = changeToSend.cacheChange;
-            FlowController::NotifyControllersChangeSent(change);
 
             if (changeToSend.fragmentNumber != 0)
             {

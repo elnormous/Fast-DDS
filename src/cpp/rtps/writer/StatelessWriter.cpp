@@ -552,16 +552,7 @@ void StatelessWriter::send_any_unsent_changes()
 {
     std::lock_guard<RecursiveTimedMutex> guard(mp_mutex);
 
-    bool remote_destinations = there_are_remote_readers_ || !fixed_locators_.empty();
-    bool no_flow_controllers = flow_controllers_.empty() && mp_RTPSParticipant->getFlowControllers().empty();
-    if (!remote_destinations || no_flow_controllers)
-    {
-        send_all_unsent_changes();
-    }
-    else
-    {
-        send_unsent_changes_with_flow_control();
-    }
+    send_all_unsent_changes();
 
     logInfo(RTPS_WRITER, "Finish sending unsent changes");
 
@@ -679,8 +670,7 @@ void StatelessWriter::send_unsent_changes_with_flow_control()
     assert(there_are_remote_readers_ || !fixed_locators_.empty());
 
     NetworkFactory& network = mp_RTPSParticipant->network_factory();
-    bool flow_controllers_limited = false;
-    while (!unsent_changes_.empty() && !flow_controllers_limited)
+    while (!unsent_changes_.empty())
     {
         RTPSWriterCollector<ReaderLocator*> changesToSend;
 
@@ -702,21 +692,6 @@ void StatelessWriter::send_unsent_changes_with_flow_control()
         }
 
         bool bHasListener = mp_listener != nullptr;
-        size_t n_items = changesToSend.size();
-
-        // Clear through local controllers
-        for (auto& controller : flow_controllers_)
-        {
-            (*controller)(changesToSend);
-        }
-
-        // Clear through parent controllers
-        for (auto& controller : mp_RTPSParticipant->getFlowControllers())
-        {
-            (*controller)(changesToSend);
-        }
-
-        flow_controllers_limited = n_items != changesToSend.size();
 
         try
         {
@@ -766,9 +741,6 @@ void StatelessWriter::send_unsent_changes_with_flow_control()
                 // and update those that were fragmented with the new sent index
                 update_unsent_changes(changeToSend.sequenceNumber, changeToSend.fragmentNumber);
                 auto change = changeToSend.cacheChange;
-
-                // Notify the controllers
-                FlowController::NotifyControllersChangeSent(change);
 
                 if (changeToSend.fragmentNumber != 0)
                 {
