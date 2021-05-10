@@ -180,8 +180,9 @@ set(${PROJECT_NAME}_source_files
     rtps/builtin/data/ReaderProxyData.cpp
     rtps/flowcontrol/ThroughputController.cpp
     rtps/flowcontrol/ThroughputControllerDescriptor.cpp
-    rtps/flowcontrol/FlowControllerConsts.cpp
     rtps/flowcontrol/FlowController.cpp
+    rtps/flowcontrol/FlowControllerConsts.cpp
+    rtps/flowcontrol/FlowControllerFactory.cpp
     rtps/exceptions/Exception.cpp
     rtps/attributes/PropertyPolicy.cpp
     rtps/common/Token.cpp

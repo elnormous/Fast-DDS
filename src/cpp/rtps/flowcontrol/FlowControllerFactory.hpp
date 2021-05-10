@@ -1,6 +1,12 @@
 #ifndef _RTPS_FLOWCONTROL_FLOWCONTROLLERFACTORY_HPP_
 #define _RTPS_FLOWCONTROL_FLOWCONTROLLERFACTORY_HPP_
 
+#include <fastdds/rtps/flowcontrol/FlowControllerDescriptor.hpp>
+#include "FlowController.hpp"
+
+#include <string>
+#include <map>
+
 namespace eprosima {
 namespace fastdds {
 namespace rtps {
@@ -9,14 +15,16 @@ class FlowControllerFactory
 {
 public:
 
+    void init();
+
     /*!
      * Registers a new flow controller.
      * This function should be used by the participant.
      *
      * @param flow_controller_descr FlowController descriptor.
      */
-    void register (
-        const FlowControllerDescriptor& flow_controller_descr);
+    void register_flow_controller (
+            const FlowControllerDescriptor& flow_controller_descr);
 
     /*!
      * Get a FlowController given its name.
