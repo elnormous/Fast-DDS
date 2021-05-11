@@ -47,9 +47,11 @@ RTPSWriter::RTPSWriter(
         RTPSParticipantImpl* impl,
         const GUID_t& guid,
         const WriterAttributes& att,
+        fastdds::rtps::FlowController* flow_controller,
         WriterHistory* hist,
         WriterListener* listen)
     : Endpoint(impl, guid, att.endpoint)
+    , flow_controller_(flow_controller)
     , mp_history(hist)
     , mp_listener(listen)
     , is_async_(att.mode == SYNCHRONOUS_WRITER ? false : true)
@@ -73,12 +75,13 @@ RTPSWriter::RTPSWriter(
         const GUID_t& guid,
         const WriterAttributes& att,
         const std::shared_ptr<IPayloadPool>& payload_pool,
+        fastdds::rtps::FlowController* flow_controller,
         WriterHistory* hist,
         WriterListener* listen)
     : RTPSWriter(
         impl, guid, att, payload_pool,
         std::make_shared<CacheChangePool>(PoolConfig::from_history_attributes(hist->m_att)),
-        hist, listen)
+        flow_controller, hist, listen)
 {
 }
 
@@ -88,9 +91,11 @@ RTPSWriter::RTPSWriter(
         const WriterAttributes& att,
         const std::shared_ptr<IPayloadPool>& payload_pool,
         const std::shared_ptr<IChangePool>& change_pool,
+        fastdds::rtps::FlowController* flow_controller,
         WriterHistory* hist,
         WriterListener* listen)
     : Endpoint(impl, guid, att.endpoint)
+    , flow_controller_(flow_controller)
     , mp_history(hist)
     , mp_listener(listen)
     , is_async_(att.mode == SYNCHRONOUS_WRITER ? false : true)

@@ -163,9 +163,10 @@ StatefulWriter::StatefulWriter(
         RTPSParticipantImpl* pimpl,
         const GUID_t& guid,
         const WriterAttributes& att,
+        fastdds::rtps::FlowController* flow_controller,
         WriterHistory* history,
         WriterListener* listener)
-    : RTPSWriter(pimpl, guid, att, history, listener)
+    : RTPSWriter(pimpl, guid, att, flow_controller, history, listener)
     , periodic_hb_event_(nullptr)
     , nack_response_event_(nullptr)
     , ack_event_(nullptr)
@@ -196,9 +197,10 @@ StatefulWriter::StatefulWriter(
         const GUID_t& guid,
         const WriterAttributes& att,
         const std::shared_ptr<IPayloadPool>& payload_pool,
+        fastdds::rtps::FlowController* flow_controller,
         WriterHistory* history,
         WriterListener* listener)
-    : RTPSWriter(pimpl, guid, att, payload_pool, history, listener)
+    : RTPSWriter(pimpl, guid, att, payload_pool, flow_controller, history, listener)
     , periodic_hb_event_(nullptr)
     , nack_response_event_(nullptr)
     , ack_event_(nullptr)
@@ -230,9 +232,10 @@ StatefulWriter::StatefulWriter(
         const WriterAttributes& att,
         const std::shared_ptr<IPayloadPool>& payload_pool,
         const std::shared_ptr<IChangePool>& change_pool,
+        fastdds::rtps::FlowController* flow_controller,
         WriterHistory* hist,
         WriterListener* listen)
-    : RTPSWriter(pimpl, guid, att, payload_pool, change_pool, hist, listen)
+    : RTPSWriter(pimpl, guid, att, payload_pool, change_pool, flow_controller, hist, listen)
     , periodic_hb_event_(nullptr)
     , nack_response_event_(nullptr)
     , ack_event_(nullptr)

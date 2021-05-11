@@ -24,7 +24,8 @@ void FlowControllerFactory::register_flow_controller (
  * @return Pointer to the FlowController. nullptr if no registered FlowController with that name.
  */
 FlowController* FlowControllerFactory::retrieve_flow_controller(
-        const std::string& flow_controller_name)
+        const std::string& flow_controller_name,
+        fastrtps::rtps::RTPSWriterPublishMode publish_mode)
 {
     // TODO
     // Return the flow controller.

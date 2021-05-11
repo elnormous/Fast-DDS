@@ -31,6 +31,7 @@
 #include <fastdds/rtps/common/LocatorSelector.hpp>
 #include <fastdds/rtps/messages/RTPSMessageGroup.h>
 #include <fastdds/rtps/messages/RTPSMessageSenderInterface.hpp>
+#include <fastdds/rtps/flowcontrol/FlowController.hpp>
 #include <fastrtps/qos/LivelinessLostStatus.h>
 #include <fastrtps/utils/collections/ResourceLimitedVector.hpp>
 
@@ -70,6 +71,7 @@ protected:
             RTPSParticipantImpl* impl,
             const GUID_t& guid,
             const WriterAttributes& att,
+            fastdds::rtps::FlowController* flow_controller,
             WriterHistory* hist,
             WriterListener* listen = nullptr);
 
@@ -78,6 +80,7 @@ protected:
             const GUID_t& guid,
             const WriterAttributes& att,
             const std::shared_ptr<IPayloadPool>& payload_pool,
+            fastdds::rtps::FlowController* flow_controller,
             WriterHistory* hist,
             WriterListener* listen = nullptr);
 
@@ -87,6 +90,7 @@ protected:
             const WriterAttributes& att,
             const std::shared_ptr<IPayloadPool>& payload_pool,
             const std::shared_ptr<IChangePool>& change_pool,
+            fastdds::rtps::FlowController* flow_controller,
             WriterHistory* hist,
             WriterListener* listen = nullptr);
 
@@ -452,6 +456,10 @@ protected:
 
     //!Is the data sent directly or announced by HB and THEN sent to the ones who ask for it?.
     bool m_pushMode = true;
+
+    //! Flow controller.
+    fastdds::rtps::FlowController* flow_controller_;
+
     //!WriterHistory
     WriterHistory* mp_history = nullptr;
     //!Listener

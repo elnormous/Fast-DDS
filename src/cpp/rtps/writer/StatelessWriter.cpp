@@ -146,9 +146,10 @@ StatelessWriter::StatelessWriter(
         RTPSParticipantImpl* impl,
         const GUID_t& guid,
         const WriterAttributes& attributes,
+        fastdds::rtps::FlowController* flow_controller,
         WriterHistory* history,
         WriterListener* listener)
-    : RTPSWriter(impl, guid, attributes, history, listener)
+    : RTPSWriter(impl, guid, attributes, flow_controller, history, listener)
     , matched_remote_readers_(attributes.matched_readers_allocation)
     , late_joiner_guids_(attributes.matched_readers_allocation)
     , unsent_changes_(resource_limits_from_history(history->m_att))
@@ -165,9 +166,10 @@ StatelessWriter::StatelessWriter(
         const GUID_t& guid,
         const WriterAttributes& attributes,
         const std::shared_ptr<IPayloadPool>& payload_pool,
+        fastdds::rtps::FlowController* flow_controller,
         WriterHistory* history,
         WriterListener* listener)
-    : RTPSWriter(impl, guid, attributes, payload_pool, history, listener)
+    : RTPSWriter(impl, guid, attributes, payload_pool, flow_controller, history, listener)
     , matched_remote_readers_(attributes.matched_readers_allocation)
     , late_joiner_guids_(attributes.matched_readers_allocation)
     , unsent_changes_(resource_limits_from_history(history->m_att))
@@ -185,9 +187,10 @@ StatelessWriter::StatelessWriter(
         const WriterAttributes& attributes,
         const std::shared_ptr<IPayloadPool>& payload_pool,
         const std::shared_ptr<IChangePool>& change_pool,
+        fastdds::rtps::FlowController* flow_controller,
         WriterHistory* history,
         WriterListener* listener)
-    : RTPSWriter(participant, guid, attributes, payload_pool, change_pool, history, listener)
+    : RTPSWriter(participant, guid, attributes, payload_pool, change_pool, flow_controller, history, listener)
     , matched_remote_readers_(attributes.matched_readers_allocation)
     , late_joiner_guids_(attributes.matched_readers_allocation)
     , unsent_changes_(resource_limits_from_history(history->m_att))

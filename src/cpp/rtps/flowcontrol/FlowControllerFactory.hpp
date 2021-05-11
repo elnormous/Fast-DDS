@@ -2,7 +2,8 @@
 #define _RTPS_FLOWCONTROL_FLOWCONTROLLERFACTORY_HPP_
 
 #include <fastdds/rtps/flowcontrol/FlowControllerDescriptor.hpp>
-#include "FlowController.hpp"
+#include <fastdds/rtps/flowcontrol/FlowController.hpp>
+#include <fastdds/rtps/attributes/WriterAttributes.h>
 
 #include <string>
 #include <map>
@@ -33,7 +34,8 @@ public:
      * @return Pointer to the FlowController. nullptr if no registered FlowController with that name.
      */
     FlowController* retrieve_flow_controller(
-            const std::string& flow_controller_name);
+            const std::string& flow_controller_name,
+            fastrtps::rtps::RTPSWriterPublishMode writer_publish_mode);
 
 private:
 
