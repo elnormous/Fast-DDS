@@ -243,7 +243,7 @@ bool StatelessReader::change_received(
     {
         if (mp_history->received_change(change, 0))
         {
-            Time_t::now(change->receptionTimestamp);
+            Time_t::now(change->reader_info.receptionTimestamp);
             update_last_notified(change->writerGUID, change->sequenceNumber);
             ++total_unread_;
 

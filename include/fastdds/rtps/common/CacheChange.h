@@ -35,6 +35,28 @@ namespace eprosima {
 namespace fastrtps {
 namespace rtps {
 
+/*!
+ * Specific information for a writer.
+ */
+struct CacheChangeWriterInfo_t
+{
+    //!Number of DATA / DATA_FRAG submessages sent to the transport (only used in Writers)
+    size_t num_sent_submessages = 0;
+    //! Used to link with previous node in a list. Used by FlowControllerImpl.
+    CacheChange_t* previous_ = nullptr;
+    //! Used to link with next node in a list. Used by FlowControllerImpl.
+    CacheChange_t* next_ = nullptr;
+};
+
+/*!
+ * Specific information for a reader.
+ */
+struct CacheChangeReaderInfo_t
+{
+    //!Reception TimeStamp (only used in Readers)
+    Time_t receptionTimestamp;
+};
+
 /**
  * Structure CacheChange_t, contains information on a specific CacheChange.
  * @ingroup COMMON_MODULE
@@ -57,10 +79,8 @@ struct RTPS_DllAPI CacheChange_t
     Time_t sourceTimestamp{};
     union
     {
-        //!Reception TimeStamp (only used in Readers)
-        Time_t receptionTimestamp;
-        //!Number of DATA / DATA_FRAG submessages sent to the transport (only used in Writers)
-        size_t num_sent_submessages = 0;
+        CacheChangeReaderInfo_t reader_info;
+        CacheChangeWriterInfo_t writer_info;
     };
 
     WriteParams write_params{};
@@ -105,7 +125,7 @@ struct RTPS_DllAPI CacheChange_t
         instanceHandle = ch_ptr->instanceHandle;
         sequenceNumber = ch_ptr->sequenceNumber;
         sourceTimestamp = ch_ptr->sourceTimestamp;
-        receptionTimestamp = ch_ptr->receptionTimestamp;
+        reader_info.receptionTimestamp = ch_ptr->reader_info.receptionTimestamp;
         write_params = ch_ptr->write_params;
         isRead = ch_ptr->isRead;
         fragment_size_ = ch_ptr->fragment_size_;
@@ -128,7 +148,7 @@ struct RTPS_DllAPI CacheChange_t
         instanceHandle = ch_ptr->instanceHandle;
         sequenceNumber = ch_ptr->sequenceNumber;
         sourceTimestamp = ch_ptr->sourceTimestamp;
-        receptionTimestamp = ch_ptr->receptionTimestamp;
+        reader_info.receptionTimestamp = ch_ptr->reader_info.receptionTimestamp;
         write_params = ch_ptr->write_params;
         isRead = ch_ptr->isRead;
 

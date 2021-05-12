@@ -773,7 +773,7 @@ bool StatelessWriter::deliver_sample(
             }
         }
 
-        on_sample_datas(cache_change->write_params.sample_identity(), cache_change->num_sent_submessages);
+        on_sample_datas(cache_change->write_params.sample_identity(), cache_change->writer_info.num_sent_submessages);
 
     }
     catch (const RTPSMessageGroup::timeout&)

@@ -576,7 +576,7 @@ void StatefulWriter::sync_delivery(
                 }
             }
 
-            on_sample_datas(change->write_params.sample_identity(), change->num_sent_submessages);
+            on_sample_datas(change->write_params.sample_identity(), change->writer_info.num_sent_submessages);
             periodic_hb_event_->restart_timer(max_blocking_time);
 
             if (disable_positive_acks_ && last_sequence_number_ == SequenceNumber_t())
@@ -929,7 +929,7 @@ void StatefulWriter::send_changes_separatedly(
                                 change,
                                 remoteReader->expects_inline_qos(),
                                 sent_fun);
-                            on_sample_datas(change->write_params.sample_identity(), change->num_sent_submessages);
+                            on_sample_datas(change->write_params.sample_identity(), change->writer_info.num_sent_submessages);
                             if (sent_ok)
                             {
                                 remoteReader->set_change_to_status(seqNum, UNDERWAY, true);
@@ -967,7 +967,7 @@ void StatefulWriter::send_changes_separatedly(
                                 change,
                                 remoteReader->expects_inline_qos(),
                                 sent_fun);
-                            on_sample_datas(change->write_params.sample_identity(), change->num_sent_submessages);
+                            on_sample_datas(change->write_params.sample_identity(), change->writer_info.num_sent_submessages);
                             if (sent_ok)
                             {
                                 max_ack_seq = seqNum;
@@ -1156,7 +1156,7 @@ void StatefulWriter::send_all_unsent_changes(
                 {
                     auto change = *cit;
                     bool sent_ok = send_data_or_fragments(group, change, inline_qos, sent_fun);
-                    on_sample_datas(change->write_params.sample_identity(), change->num_sent_submessages);
+                    on_sample_datas(change->write_params.sample_identity(), change->writer_info.num_sent_submessages);
                     if (sent_ok)
                     {
                         total_sent_size += (*cit)->serializedPayload.length;
@@ -1306,7 +1306,7 @@ void StatefulWriter::send_unsent_changes_with_flow_control(
                         expectsInlineQos))
                 {
                     add_statistics_sent_submessage(change, num_locators);
-                    on_sample_datas(change->write_params.sample_identity(), change->num_sent_submessages);
+                    on_sample_datas(change->write_params.sample_identity(), change->writer_info.num_sent_submessages);
                     bool must_wake_up_async_thread = false;
                     for (ReaderProxy* remoteReader : changeToSend.remoteReaders)
                     {
@@ -1354,7 +1354,7 @@ void StatefulWriter::send_unsent_changes_with_flow_control(
                 if (group.add_data(*change, expectsInlineQos))
                 {
                     add_statistics_sent_submessage(change, num_locators);
-                    on_sample_datas(change->write_params.sample_identity(), change->num_sent_submessages);
+                    on_sample_datas(change->write_params.sample_identity(), change->writer_info.num_sent_submessages);
                     for (ReaderProxy* remoteReader : changeToSend.remoteReaders)
                     {
                         remoteReader->set_change_to_status(changeToSend.sequenceNumber, UNDERWAY, true);
