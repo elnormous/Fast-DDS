@@ -68,6 +68,8 @@ RTPSWriter::RTPSWriter(
     payload_pool = BasicPayloadPool::get(cfg, change_pool);
 
     init(payload_pool, change_pool, att);
+
+    flow_controller_->register_writer(this);
 }
 
 RTPSWriter::RTPSWriter(
@@ -107,6 +109,8 @@ RTPSWriter::RTPSWriter(
     , liveliness_announcement_period_(att.liveliness_announcement_period)
 {
     init(payload_pool, change_pool, att);
+
+    flow_controller_->register_writer(this);
 }
 
 void RTPSWriter::init(

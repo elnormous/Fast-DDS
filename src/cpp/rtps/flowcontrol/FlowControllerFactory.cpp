@@ -1,13 +1,24 @@
 #include "FlowControllerFactory.hpp"
+#include "FlowControllerImpl.hpp"
 
 namespace eprosima {
 namespace fastdds {
 namespace rtps {
 
+constexpr char* const pure_sync_flow_congtroller_name = "PureSyncFlowController";
+
+FlowControllerFactory::~FlowControllerFactory()
+{
+    delete flow_controllers_[pure_sync_flow_congtroller_name];
+}
+
 void FlowControllerFactory::init()
 {
-    // TODO
     // Create default flow controllers.
+
+    // PureSyncFlowController -> used by besteffort writers.
+    flow_controllers_.insert({pure_sync_flow_congtroller_name,
+                              new FlowControllerImpl<FlowControllerPureSyncPublishMode, FlowControllerFifoSchedule>()});
 }
 
 void FlowControllerFactory::register_flow_controller (
@@ -25,11 +36,29 @@ void FlowControllerFactory::register_flow_controller (
  */
 FlowController* FlowControllerFactory::retrieve_flow_controller(
         const std::string& flow_controller_name,
-        fastrtps::rtps::RTPSWriterPublishMode publish_mode)
+        const fastrtps::rtps::WriterAttributes& writer_attributes)
 {
-    // TODO
-    // Return the flow controller.
-    return nullptr;
+    FlowController* returned_flow = nullptr;
+
+    // Detect it has to be returned a default flow_controller.
+    if (0 == flow_controller_name.compare(FASTDDS_FLOW_CONTROLLER_DEFAULT))
+    {
+        if (fastrtps::rtps::SYNCHRONOUS_WRITER == writer_attributes.mode)
+        {
+            if (fastrtps::rtps::BEST_EFFORT == writer_attributes.endpoint.reliabilityKind &&
+                    fastrtps::rtps::VOLATILE == writer_attributes.endpoint.durabilityKind)
+            {
+                returned_flow = flow_controllers_[pure_sync_flow_congtroller_name];
+            }
+        }
+    }
+
+    if (nullptr != returned_flow)
+    {
+        returned_flow->init();
+    }
+
+    return returned_flow;
 }
 
 } // namespace rtps

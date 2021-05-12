@@ -329,8 +329,6 @@ bool StatelessWriter::datasharing_delivery(
     return true;
 }
 
-// TODO(Ricardo) This function only can be used by history. Private it and frined History.
-// TODO(Ricardo) Look for other functions
 void StatelessWriter::unsent_change_added_to_history(
         CacheChange_t* change,
         const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
@@ -355,67 +353,7 @@ void StatelessWriter::unsent_change_added_to_history(
     // Now for the rest of readers
     if (!fixed_locators_.empty() || getMatchedReadersSize() > 0)
     {
-        if (!isAsync())
-        {
-            try
-            {
-                if (m_separateSendingEnabled)
-                {
-                    std::vector<GUID_t> guids(1);
-                    for (std::unique_ptr<ReaderLocator>& it : matched_local_readers_)
-                    {
-                        intraprocess_delivery(change, *it);
-                    }
-                    for (std::unique_ptr<ReaderLocator>& it : matched_remote_readers_)
-                    {
-                        RTPSMessageGroup group(mp_RTPSParticipant, this, *it, max_blocking_time);
-                        size_t num_locators = it->locators_size();
-                        send_data_or_fragments(group, change, is_inline_qos_expected_,
-                                [num_locators](
-                                    CacheChange_t* change,
-                                    FragmentNumber_t /*frag*/)
-                                {
-                                    add_statistics_sent_submessage(change, num_locators);
-                                });
-                    }
-                }
-                else
-                {
-                    for (std::unique_ptr<ReaderLocator>& it : matched_local_readers_)
-                    {
-                        intraprocess_delivery(change, *it);
-                    }
-
-                    if (there_are_remote_readers_ || !fixed_locators_.empty())
-                    {
-                        RTPSMessageGroup group(mp_RTPSParticipant, this, *this, max_blocking_time);
-                        size_t num_locators = locator_selector_.selected_size() + fixed_locators_.size();
-                        send_data_or_fragments(group, change, is_inline_qos_expected_,
-                                [num_locators](
-                                    CacheChange_t* change,
-                                    FragmentNumber_t /*frag*/)
-                                {
-                                    add_statistics_sent_submessage(change, num_locators);
-                                });
-                    }
-                }
-
-                on_sample_datas(change->write_params.sample_identity(), change->num_sent_submessages);
-                if (mp_listener != nullptr)
-                {
-                    mp_listener->onWriterChangeReceivedByAll(this, change);
-                }
-            }
-            catch (const RTPSMessageGroup::timeout&)
-            {
-                logError(RTPS_WRITER, "Max blocking time reached");
-            }
-        }
-        else
-        {
-            unsent_changes_.push_back(ChangeForReader_t(change));
-            mp_RTPSParticipant->async_thread().wake_up(this, max_blocking_time);
-        }
+        flow_controller_->add_new_sample(this, change, max_blocking_time);
     }
     else
     {
@@ -551,6 +489,7 @@ void StatelessWriter::update_unsent_changes(
     }
 }
 
+//TODO Remove
 void StatelessWriter::send_any_unsent_changes()
 {
     std::lock_guard<RecursiveTimedMutex> guard(mp_mutex);
@@ -563,6 +502,7 @@ void StatelessWriter::send_any_unsent_changes()
     unsent_changes_cond_.notify_all();
 }
 
+//TODO Remove
 void StatelessWriter::send_all_unsent_changes()
 {
     //TODO(Mcc) Separate sending for asynchronous writers
@@ -1028,6 +968,72 @@ bool StatelessWriter::send(
            mp_RTPSParticipant->sendSync(message, m_guid,
                    Locators(fixed_locators_.begin()), Locators(fixed_locators_.end()),
                    max_blocking_time_point);
+}
+
+bool StatelessWriter::deliver_sample(
+        const CacheChange_t* cache_change,
+        const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
+{
+    std::lock_guard<RecursiveTimedMutex> guard(mp_mutex);
+
+    /*
+       if (!late_joiner_guids_.empty() &&
+                cache_change->sequenceNumber >= first_seq_for_all_readers_)
+
+       try
+       {
+        if (m_separateSendingEnabled)
+        {
+            std::vector<GUID_t> guids(1);
+            for (std::unique_ptr<ReaderLocator>& it : matched_local_readers_)
+            {
+                intraprocess_delivery(change, *it);
+            }
+            for (std::unique_ptr<ReaderLocator>& it : matched_remote_readers_)
+            {
+                RTPSMessageGroup group(mp_RTPSParticipant, this, *it, max_blocking_time);
+                size_t num_locators = it->locators_size();
+                send_data_or_fragments(group, change, is_inline_qos_expected_,
+                        [num_locators](
+                            CacheChange_t* change,
+                            FragmentNumber_t)
+                        {
+                        add_statistics_sent_submessage(change, num_locators);
+                        });
+            }
+        }
+        else
+        {
+            for (std::unique_ptr<ReaderLocator>& it : matched_local_readers_)
+            {
+                intraprocess_delivery(change, *it);
+            }
+
+            if (there_are_remote_readers_ || !fixed_locators_.empty())
+            {
+                RTPSMessageGroup group(mp_RTPSParticipant, this, *this, max_blocking_time);
+                size_t num_locators = locator_selector_.selected_size() + fixed_locators_.size();
+                send_data_or_fragments(group, change, is_inline_qos_expected_,
+                        [num_locators](
+                            CacheChange_t* change,
+                            FragmentNumber_t)
+                        {
+                        add_statistics_sent_submessage(change, num_locators);
+                        });
+            }
+        }
+
+        on_sample_datas(change->write_params.sample_identity(), change->num_sent_submessages);
+        if (mp_listener != nullptr)
+        {
+            mp_listener->onWriterChangeReceivedByAll(this, change);
+        }
+       }
+       catch (const RTPSMessageGroup::timeout&)
+       {
+        logError(RTPS_WRITER, "Max blocking time reached");
+       }
+     */
 }
 
 } /* namespace rtps */

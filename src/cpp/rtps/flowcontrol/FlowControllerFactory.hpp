@@ -12,10 +12,26 @@ namespace eprosima {
 namespace fastdds {
 namespace rtps {
 
+/*!
+ * Factory of flow controllers.
+ *
+ * @note Non-safe thread
+ */
 class FlowControllerFactory
 {
 public:
 
+    /*!
+     * Destructor
+     * In charge of deleting all flow controllers.
+     */
+    ~FlowControllerFactory();
+
+    /*!
+     * Initialize the factory.
+     * In charge of creating default flow controllers.
+     * Call always before use it.
+     */
     void init();
 
     /*!
@@ -35,7 +51,7 @@ public:
      */
     FlowController* retrieve_flow_controller(
             const std::string& flow_controller_name,
-            fastrtps::rtps::RTPSWriterPublishMode writer_publish_mode);
+            const fastrtps::rtps::WriterAttributes& writer_attributes);
 
 private:
 

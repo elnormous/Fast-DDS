@@ -140,7 +140,7 @@ public:
     //! Keep duration to keep a sample before considering it has been acked
     Duration_t keep_duration;
 
-    //! Flow controller name. Default: FASTDDS_FLOW_CONTROLLER_DEFAULT.
+    //! Flow controller name. Default: fastdds::rtps::FASTDDS_FLOW_CONTROLLER_DEFAULT.
     const char* flow_controller_name = fastdds::rtps::FASTDDS_FLOW_CONTROLLER_DEFAULT;
 };
 

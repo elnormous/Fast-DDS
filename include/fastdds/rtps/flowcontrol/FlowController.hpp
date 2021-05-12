@@ -22,6 +22,8 @@ class FlowController
 {
 public:
 
+    virtual ~FlowController() = default;
+
     /*!
      * Initializes the flow controller.
      */
@@ -79,7 +81,7 @@ public:
      * @param Pointer to the change which should be removed if it is currently managed by this object.
      */
     virtual void remove_change(
-            fastrtps::rtps::CacheChange_t* change);
+            fastrtps::rtps::CacheChange_t* change) = 0;
 };
 
 } // namespace rtps

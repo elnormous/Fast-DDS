@@ -612,7 +612,7 @@ bool RTPSParticipantImpl::create_writer(
             old_descriptor.max_bytes_per_period = param.throughputController.bytesPerPeriod;
             old_descriptor.period_ms = param.throughputController.periodMillisecs;
             flow_controller_factory_.register_flow_controller(old_descriptor);
-            flow_controller =  flow_controller_factory_.retrieve_flow_controller(guid_str.c_str(), param.mode);
+            flow_controller =  flow_controller_factory_.retrieve_flow_controller(guid_str.c_str(), param);
         }
         else
         {
@@ -629,15 +629,14 @@ bool RTPSParticipantImpl::create_writer(
             std::stringstream guid_sstr;
             guid_sstr << m_guid;
             std::string guid_str = guid_sstr.str();
-            flow_controller = flow_controller_factory_.retrieve_flow_controller(guid_sstr.str(), param.mode);
+            flow_controller = flow_controller_factory_.retrieve_flow_controller(guid_sstr.str(), param);
         }
     }
 
     // Retrieve flow controller.
     if (nullptr == flow_controller)
     {
-        flow_controller = flow_controller_factory_.retrieve_flow_controller(param.flow_controller_name,
-                        param.mode);
+        flow_controller = flow_controller_factory_.retrieve_flow_controller(param.flow_controller_name, param);
     }
 
     if (nullptr == flow_controller)

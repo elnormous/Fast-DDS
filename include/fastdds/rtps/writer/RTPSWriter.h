@@ -452,6 +452,23 @@ public:
      */
     bool is_datasharing_compatible() const;
 
+    /*!
+     * Tells writer the sample can be sent to the network.
+     * This function should be used by a fastdds::rtps::FlowController.
+     *
+     * @param cache_change Pointer to the CacheChange_t that represents the sample which can be sent.
+     * @return true if the sample could be send to all addressers. false in other case.
+     */
+    virtual bool deliver_sample(
+            const CacheChange_t* cache_change,
+            const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
+    {
+        // TODO Make pure virtual
+        (void)cache_change;
+        (void) max_blocking_time;
+        return false;
+    }
+
 protected:
 
     //!Is the data sent directly or announced by HB and THEN sent to the ones who ask for it?.
