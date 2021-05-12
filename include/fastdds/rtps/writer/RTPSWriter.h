@@ -460,7 +460,7 @@ public:
      * @return true if the sample could be send to all addressers. false in other case.
      */
     virtual bool deliver_sample(
-            const CacheChange_t* cache_change,
+            CacheChange_t* cache_change,
             const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
     {
         // TODO Make pure virtual

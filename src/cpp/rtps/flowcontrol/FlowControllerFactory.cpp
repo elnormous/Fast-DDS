@@ -6,6 +6,7 @@ namespace fastdds {
 namespace rtps {
 
 constexpr char* const pure_sync_flow_congtroller_name = "PureSyncFlowController";
+constexpr char* const sync_flow_congtroller_name = "SyncFlowController";
 
 FlowControllerFactory::~FlowControllerFactory()
 {
@@ -16,9 +17,12 @@ void FlowControllerFactory::init()
 {
     // Create default flow controllers.
 
-    // PureSyncFlowController -> used by besteffort writers.
+    // PureSyncFlowController -> used by volatile besteffort writers.
     flow_controllers_.insert({pure_sync_flow_congtroller_name,
                               new FlowControllerImpl<FlowControllerPureSyncPublishMode, FlowControllerFifoSchedule>()});
+    // SyncFlowController -> used by rest of besteffort writers.
+    flow_controllers_.insert({sync_flow_congtroller_name,
+                              new FlowControllerImpl<FlowControllerSyncPublishMode, FlowControllerFifoSchedule>()});
 }
 
 void FlowControllerFactory::register_flow_controller (
@@ -49,6 +53,10 @@ FlowController* FlowControllerFactory::retrieve_flow_controller(
                     fastrtps::rtps::VOLATILE == writer_attributes.endpoint.durabilityKind)
             {
                 returned_flow = flow_controllers_[pure_sync_flow_congtroller_name];
+            }
+            else
+            {
+                returned_flow = flow_controllers_[sync_flow_congtroller_name];
             }
         }
     }

@@ -231,6 +231,22 @@ public:
 
     }
 
+    uint64_t first_seq_already_sent() const
+    {
+        return first_seq_already_sent_;
+    }
+
+    uint64_t& first_seq_already_sent()
+    {
+        return first_seq_already_sent_;
+    }
+
+    void first_seq_already_sent(
+            uint64_t sequence_number)
+    {
+        first_seq_already_sent_ = sequence_number;
+    }
+
 private:
 
     RTPSWriter* owner_;
@@ -242,6 +258,7 @@ private:
     std::vector<GuidPrefix_t> guid_prefix_as_vector_;
     std::vector<GUID_t> guid_as_vector_;
     IDataSharingNotifier* datasharing_notifier_;
+    uint64_t first_seq_already_sent_ = 0;
 };
 
 } /* namespace rtps */

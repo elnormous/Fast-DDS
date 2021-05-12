@@ -94,6 +94,8 @@ bool ReaderLocator::start(
             datasharing_notifier_->enable(remote_guid);
         }
 
+        first_seq_already_sent_ = 0;
+
         return true;
     }
 

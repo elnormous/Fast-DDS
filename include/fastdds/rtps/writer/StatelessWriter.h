@@ -123,7 +123,10 @@ public:
     /**
      * Method to indicate that there are changes not sent in some of all ReaderProxy.
      */
-    void send_any_unsent_changes() override;
+    //TODO Remove
+    void send_any_unsent_changes() override
+    {
+    }
 
     /**
      * Update the Attributes of the Writer.
@@ -138,10 +141,6 @@ public:
 
     bool set_fixed_locators(
             const LocatorList_t& locator_list);
-
-    void update_unsent_changes(
-            const SequenceNumber_t& seq_num,
-            const FragmentNumber_t& frag_num);
 
     //!Reset the unsent changes.
     void unsent_changes_reset();
@@ -191,7 +190,7 @@ public:
      * @return true if the sample could be send to all addressers. false in other case.
      */
     bool deliver_sample(
-            const CacheChange_t* cache_change,
+            CacheChange_t* cache_change,
             const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time) override;
 
 private:
@@ -214,23 +213,16 @@ private:
             CacheChange_t* change,
             ReaderLocator& reader_locator);
 
-    void send_all_unsent_changes();
-
-    void send_unsent_changes_with_flow_control();
-
     bool is_inline_qos_expected_ = false;
     LocatorList_t fixed_locators_;
     ResourceLimitedVector<std::unique_ptr<ReaderLocator>> matched_remote_readers_;
 
-    ResourceLimitedVector<GUID_t> late_joiner_guids_;
-    SequenceNumber_t first_seq_for_all_readers_;
     bool ignore_fixed_locators_ = false;
 
-    ResourceLimitedVector<ChangeForReader_t, std::true_type> unsent_changes_;
     std::condition_variable_any unsent_changes_cond_;
     std::vector<std::unique_ptr<FlowController>> flow_controllers_;
-    uint64_t last_intraprocess_sequence_number_;
-    bool there_are_remote_readers_ = false;
+    uint64_t first_seq_for_all_readers_ = 0;
+    uint64_t last_sequence_number_sent_ = 0;
     ResourceLimitedVector<std::unique_ptr<ReaderLocator>> matched_local_readers_;
     ResourceLimitedVector<std::unique_ptr<ReaderLocator>> matched_datasharing_readers_;
     ResourceLimitedVector<std::unique_ptr<ReaderLocator>> matched_readers_pool_;
