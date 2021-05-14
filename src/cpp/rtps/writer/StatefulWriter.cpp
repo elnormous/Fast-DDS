@@ -929,7 +929,9 @@ void StatefulWriter::send_changes_separatedly(
                                 change,
                                 remoteReader->expects_inline_qos(),
                                 sent_fun);
-                            on_sample_datas(change->write_params.sample_identity(), change->writer_info.num_sent_submessages);
+                            on_sample_datas(
+                                change->write_params.sample_identity(),
+                                change->writer_info.num_sent_submessages);
                             if (sent_ok)
                             {
                                 remoteReader->set_change_to_status(seqNum, UNDERWAY, true);
@@ -967,7 +969,9 @@ void StatefulWriter::send_changes_separatedly(
                                 change,
                                 remoteReader->expects_inline_qos(),
                                 sent_fun);
-                            on_sample_datas(change->write_params.sample_identity(), change->writer_info.num_sent_submessages);
+                            on_sample_datas(
+                                change->write_params.sample_identity(),
+                                change->writer_info.num_sent_submessages);
                             if (sent_ok)
                             {
                                 max_ack_seq = seqNum;
@@ -2587,6 +2591,14 @@ void StatefulWriter::reader_data_filter(
 const fastdds::rtps::IReaderDataFilter* StatefulWriter::reader_data_filter() const
 {
     return reader_data_filter_;
+}
+
+bool StatefulWriter::deliver_sample_nts(
+        CacheChange_t* cache_change,
+        const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
+{
+    std::cout << "TRY TO SEND" << std::endl;
+    return true;
 }
 
 }  // namespace rtps

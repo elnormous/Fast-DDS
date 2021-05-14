@@ -82,6 +82,12 @@ public:
      */
     virtual void remove_change(
             fastrtps::rtps::CacheChange_t* change) = 0;
+
+    bool try_lock(
+            fastrtps::rtps::RTPSWriter* writer);
+
+    void unlock(
+            fastrtps::rtps::RTPSWriter* writer);
 };
 
 } // namespace rtps

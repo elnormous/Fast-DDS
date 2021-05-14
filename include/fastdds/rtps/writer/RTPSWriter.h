@@ -457,17 +457,12 @@ public:
      * This function should be used by a fastdds::rtps::FlowController.
      *
      * @param cache_change Pointer to the CacheChange_t that represents the sample which can be sent.
-     * @return true if the sample could be send to all addressers. false in other case.
+     * @return Return code.
+     * @note Must be non-thread safe.
      */
-    virtual bool deliver_sample(
+    virtual bool deliver_sample_nts(
             CacheChange_t* cache_change,
-            const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
-    {
-        // TODO Make pure virtual
-        (void)cache_change;
-        (void) max_blocking_time;
-        return false;
-    }
+            const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time) = 0;
 
 protected:
 
@@ -586,6 +581,11 @@ private:
 
     RTPSWriter* next_[2] = { nullptr, nullptr };
 
+    friend bool fastdds::rtps::FlowController::try_lock(
+            RTPSWriter* writer);
+
+    friend void fastdds::rtps::FlowController::unlock(
+            RTPSWriter* writer);
 };
 
 } /* namespace rtps */

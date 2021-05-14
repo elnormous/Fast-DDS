@@ -187,9 +187,10 @@ public:
      * This function should be used by a fastdds::rtps::FlowController.
      *
      * @param cache_change Pointer to the CacheChange_t that represents the sample which can be sent.
-     * @return true if the sample could be send to all addressers. false in other case.
+     * @return Return code.
+     * @note Non-thread safe.
      */
-    bool deliver_sample(
+    bool deliver_sample_nts(
             CacheChange_t* cache_change,
             const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time) override;
 

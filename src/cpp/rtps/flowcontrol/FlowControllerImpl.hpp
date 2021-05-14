@@ -8,6 +8,8 @@
 #include <map>
 #include <thread>
 #include <mutex>
+#include <cassert>
+#include <condition_variable>
 
 namespace eprosima {
 namespace fastdds {
@@ -15,14 +17,59 @@ namespace rtps {
 
 /** Classes used to specify FlowController's publication model **/
 
-//! Sends new samples synchronously. Old samples are sent asynchronously */
-struct FlowControllerSyncPublishMode {};
+//! Only sends new samples synchronously. There is no mechanism to send old ones.
+struct FlowControllerPureSyncPublishMode {};
 
 //! Sends new samples asynchronously. Old samples are sent also asynchronously */
-struct FlowControllerAsyncPublishMode {};
+struct FlowControllerAsyncPublishMode
+{
+    FlowControllerAsyncPublishMode()
+    {
+        headinterested.writer_info.next = &tailinterested;
+        tailinterested.writer_info.previous = &headinterested;
+        head.writer_info.next = &tail;
+        tail.writer_info.previous = &head;
+    }
 
-//! Only sends new samples synchronously. There is no mechanism to send old ones.
-struct FlowControllerPureSyncPublishMode : public FlowControllerSyncPublishMode {};
+    virtual ~FlowControllerAsyncPublishMode()
+    {
+        running = false;
+        thread.join();
+    }
+
+    std::thread thread;
+
+    bool running = false;
+
+    std::condition_variable cv;
+
+    //! Mutex for interested samples to be added.
+    // TODO Improve this mutex with simple atomic? spin mutex.
+    std::mutex changes_interested_mutex;
+
+    //! Head element of interested changes list to be included.
+    //! Should be protected with changes_interested_mutex.
+    fastrtps::rtps::CacheChange_t headinterested;
+
+    //! Tail element of interested changes list to be included.
+    //! Should be protected with changes_interested_mutex.
+    fastrtps::rtps::CacheChange_t tailinterested;
+
+    //! Head element on the queue.
+    //! Should be protected with mutex_.
+    fastrtps::rtps::CacheChange_t head;
+
+    //! Tail element on the queue.
+    //! Should be protected with mutex_.
+    fastrtps::rtps::CacheChange_t tail;
+
+    //! Used to warning async thread a writer wants to remove a sample.
+    std::atomic<uint32_t> writers_interested_in_remove = {0};
+};
+
+//! Sends new samples synchronously. Old samples are sent asynchronously */
+struct FlowControllerSyncPublishMode : public FlowControllerPureSyncPublishMode, FlowControllerAsyncPublishMode {};
+
 
 /** Classes used to specify FlowController's sample scheduling **/
 
@@ -41,6 +88,8 @@ struct FlowControllerPriorityWithReservation {};
 template<typename PublishMode, typename SampleScheduling>
 class FlowControllerImpl : public FlowController
 {
+    using publish_mode = PublishMode;
+
 public:
 
     virtual ~FlowControllerImpl() = default;
@@ -122,7 +171,8 @@ public:
     void remove_change(
             fastrtps::rtps::CacheChange_t* change) override
     {
-        // Search change and remove it
+        assert(nullptr != change);
+        remove_change_impl(change);
     }
 
 private:
@@ -134,7 +184,12 @@ private:
     typename std::enable_if<!std::is_same<FlowControllerPureSyncPublishMode, PubMode>::value, void>::type
     initialize_async_thread()
     {
-        // Code for initializing the asynchronous thread.
+        if (false == async_mode.running)
+        {
+            // Code for initializing the asynchronous thread.
+            async_mode.running = true;
+            async_mode.thread = std::thread(&FlowControllerImpl::run, this);
+        }
     }
 
     /*! This function is used when PublishMode = FlowControllerPureSyncPublishMode.
@@ -155,13 +210,14 @@ private:
      * try sending it again asynchronously.
      */
     template<typename PubMode = PublishMode>
-    typename std::enable_if<std::is_base_of<FlowControllerSyncPublishMode, PubMode>::value, bool>::type
+    typename std::enable_if<std::is_base_of<FlowControllerPureSyncPublishMode, PubMode>::value, bool>::type
     add_new_sample_impl(
             fastrtps::rtps::RTPSWriter* writer,
             fastrtps::rtps::CacheChange_t* change,
             const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
     {
-        if (!writer->deliver_sample(change, max_blocking_time))
+        // This call should be made with writer's mutex locked.
+        if (!writer->deliver_sample_nts(change, max_blocking_time))
         {
             // Sync delivery failes. Try to store for asynchronous delivery.
             return add_old_sample_impl(writer, change, max_blocking_time);
@@ -172,7 +228,7 @@ private:
      * This function stores internally the sample to send it asynchronously.
      */
     template<typename PubMode = PublishMode>
-    typename std::enable_if<std::is_base_of<FlowControllerAsyncPublishMode, PubMode>::value, bool>::type
+    typename std::enable_if<!std::is_base_of<FlowControllerPureSyncPublishMode, PubMode>::value, bool>::type
     add_new_sample_impl(
             fastrtps::rtps::RTPSWriter* writer,
             fastrtps::rtps::CacheChange_t* change,
@@ -183,14 +239,36 @@ private:
 
     /*!
      * This function store internally the sample and wake up the async thread.
+     *
+     * @note Before calling this function, the change's writer mutex have to be locked.
      */
     template<typename PubMode = PublishMode>
     typename std::enable_if<!std::is_same<FlowControllerPureSyncPublishMode, PubMode>::value, bool>::type
     add_old_sample_impl(
-            fastrtps::rtps::RTPSWriter* writer,
+            fastrtps::rtps::RTPSWriter*,
             fastrtps::rtps::CacheChange_t* change,
-            const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
+            const std::chrono::time_point<std::chrono::steady_clock>& /* TODO max_blocking_time*/)
     {
+        // This comparison is thread-safe, because we ensure the change to a problematic state is always protected for
+        // its writer's mutex.
+        // Problematic states:
+        // - Being added: change both pointers from nullptr to a pointer values.
+        // - Being removed: change both pointer from pointer values to nullptr.
+        if (nullptr == change->writer_info.previous &&
+                nullptr == change->writer_info.next)
+        {
+            std::unique_lock<std::mutex> lock(async_mode.changes_interested_mutex);
+            change->writer_info.previous = async_mode.tailinterested.writer_info.previous;
+            change->writer_info.previous->writer_info.next = change;
+            async_mode.tailinterested.writer_info.previous = change;
+            change->writer_info.next = &async_mode.tailinterested;
+
+            async_mode.cv.notify_one();
+            std::cout << "ADDED" << std::endl; //TODO Remove
+
+            return true;
+        }
+
         return false;
     }
 
@@ -200,12 +278,58 @@ private:
     template<typename PubMode = PublishMode>
     typename std::enable_if<std::is_same<FlowControllerPureSyncPublishMode, PubMode>::value, bool>::type
     add_old_sample_impl(
-            fastrtps::rtps::RTPSWriter* writer,
-            fastrtps::rtps::CacheChange_t* change,
-            const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
+            fastrtps::rtps::RTPSWriter*,
+            fastrtps::rtps::CacheChange_t*,
+            const std::chrono::time_point<std::chrono::steady_clock>&)
     {
         // Do nothing. Fail.
         return false;
+    }
+
+    /*!
+     * This function store internally the sample and wake up the async thread.
+     *
+     * @note Before calling this function, the change's writer mutex have to be locked.
+     */
+    template<typename PubMode = PublishMode>
+    typename std::enable_if<!std::is_same<FlowControllerPureSyncPublishMode, PubMode>::value, void>::type
+    remove_change_impl(
+            fastrtps::rtps::CacheChange_t* change)
+    {
+        // This comparison is thread-safe, because we ensure the change to a problematic state is always protected for
+        // its writer's mutex.
+        // Problematic states:
+        // - Being added: change both pointers from nullptr to a pointer values.
+        // - Being removed: change both pointer from pointer values to nullptr.
+        if (nullptr != change->writer_info.previous ||
+                nullptr != change->writer_info.next)
+        {
+            ++async_mode.writers_interested_in_remove;
+            std::unique_lock<std::mutex> lock(mutex_);
+            std::unique_lock<std::mutex> interested_lock(async_mode.changes_interested_mutex);
+
+            // When blocked, both pointer are different than nullptr.
+            assert(nullptr != change->writer_info.previous &&
+                    nullptr != change->writer_info.next);
+
+            // Try to join previous node and next node.
+            change->writer_info.previous->writer_info.next = change->writer_info.next;
+            change->writer_info.next->writer_info.previous = change->writer_info.previous;
+            change->writer_info.previous = nullptr;
+            change->writer_info.next = nullptr;
+            --async_mode.writers_interested_in_remove;
+        }
+    }
+
+    /*! This function is used when PublishMode = FlowControllerPureSyncPublishMode.
+     *  In this case there is no async mechanism.
+     */
+    template<typename PubMode = PublishMode>
+    typename std::enable_if<std::is_same<FlowControllerPureSyncPublishMode, PubMode>::value, void>::type
+    remove_change_impl(
+            fastrtps::rtps::CacheChange_t*)
+    {
+        // Do nothing. Fail.
     }
 
     /*!
@@ -213,6 +337,57 @@ private:
      */
     void run()
     {
+        while (async_mode.running)
+        {
+            // There is writers interested in remove a sample.
+            if (0 != async_mode.writers_interested_in_remove)
+            {
+                continue;
+            }
+
+            std::unique_lock<std::mutex> lock(mutex_);
+
+            add_interested_changes_to_queue_nts();
+
+            while (&async_mode.tail != async_mode.head.writer_info.next)
+            {
+                fastrtps::rtps::CacheChange_t* change_to_process = async_mode.head.writer_info.next;
+                auto writer_it = writers_.find(change_to_process->writerGUID);
+                assert(writers_.end() != writer_it);
+
+                if (!try_lock(writer_it->second))
+                {
+                    // Unlock mutex_ and try again.
+                    break;
+                }
+
+                if (!writer_it->second->deliver_sample_nts(change_to_process,
+                        std::chrono::steady_clock::now() + std::chrono::hours(24)))
+                {
+                    unlock(writer_it->second);
+                    // Unlock mutex_ and try again.
+                    break;
+                }
+
+                // Remove from queue.
+                change_to_process->writer_info.previous->writer_info.next = change_to_process->writer_info.next;
+                change_to_process->writer_info.next->writer_info.previous = change_to_process->writer_info.previous;
+                change_to_process->writer_info.previous = nullptr;
+                change_to_process->writer_info.next = nullptr;
+
+
+                unlock(writer_it->second);
+
+                if (0 != async_mode.writers_interested_in_remove)
+                {
+                    // There are writers that want to remove samples.
+                    break;
+                }
+
+                // Add interested changes into the queue.
+                add_interested_changes_to_queue_nts();
+            }
+        }
     }
 
     /*!
@@ -223,40 +398,51 @@ private:
      * @return Pointer to next change to be sent. nullptr implies there is no sample to be sent or is forbidden due to
      * bandwidth exceeded.
      */
-    fastrtps::rtps::CacheChange_t* get_next_change()
+    fastrtps::rtps::CacheChange_t* get_next_change_nts()
     {
-        // Check if there is available bandwidth to send a samples.
-
-        return first_;
+        /*
+           // Check if there is available bandwidth to send a samples.
+           fastrtps::rtps::CacheChange_t* change = first_;
+           first_ = change->writer_info.next;
+           change->writer_info.next = nullptr;
+           return first_;
+         */
     }
 
     /*!
      * Store the sample at the end of the list
      * when SampleScheduling == FlowControllerFifoSchedule.
-     *
-     * @return true if the sample was added. false otherwise.
      */
     template<typename Scheculing = SampleScheduling>
-    typename std::enable_if<std::is_same<FlowControllerFifoSchedule, Scheculing>::value, bool>::type
-    store_sample_nts(
-            fastrtps::rtps::RTPSWriter*,
-            fastrtps::rtps::CacheChange_t* change)
+    typename std::enable_if<std::is_same<FlowControllerFifoSchedule, Scheculing>::value, void>::type
+    add_interested_changes_to_queue_nts()
     {
-        return false;
-    }
+        // This function should be called with mutex_ locked, because the queue is changed.
 
-    std::map<fastrtps::rtps::GUID_t, fastrtps::rtps::RTPSWriter*> writers_;
+        std::unique_lock<std::mutex> lock(async_mode.changes_interested_mutex);
+
+        // TODO Remember with best effor this is not work if is transient local adding 1,2,3 and 3 is in the queue.
+        fastrtps::rtps::CacheChange_t* interested_it = async_mode.headinterested.writer_info.next;
+        fastrtps::rtps::CacheChange_t* next_it = nullptr;
+        while (&async_mode.tailinterested != interested_it)
+        {
+            next_it = interested_it->writer_info.next;
+            interested_it->writer_info.previous->writer_info.next = interested_it->writer_info.next;
+            interested_it->writer_info.next->writer_info.previous = interested_it->writer_info.previous;
+            interested_it->writer_info.previous = async_mode.tail.writer_info.previous;
+            interested_it->writer_info.previous->writer_info.next = interested_it;
+            async_mode.tail.writer_info.previous = interested_it;
+            interested_it->writer_info.next = &async_mode.tail;
+
+            interested_it = next_it;
+        }
+    }
 
     std::mutex mutex_;
 
-    //! Asynchronous thread.
-    std::thread async_thread_;
+    std::map<fastrtps::rtps::GUID_t, fastrtps::rtps::RTPSWriter*> writers_;
 
-    //! First element on the queue.
-    fastrtps::rtps::CacheChange_t* first_ = nullptr;
-
-    //! Last element on the queue.
-    fastrtps::rtps::CacheChange_t* last_ = nullptr;
+    publish_mode async_mode;
 };
 
 } // namespace rtps

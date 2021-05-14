@@ -384,6 +384,18 @@ public:
      */
     const fastdds::rtps::IReaderDataFilter* reader_data_filter() const;
 
+    /*!
+     * Tells writer the sample can be sent to the network.
+     * This function should be used by a fastdds::rtps::FlowController.
+     *
+     * @param cache_change Pointer to the CacheChange_t that represents the sample which can be sent.
+     * @return Return code.
+     * @note Must be non-thread safe.
+     */
+    bool deliver_sample_nts(
+            CacheChange_t* cache_change,
+            const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time) override;
+
 private:
 
     bool is_acked_by_all(

@@ -686,11 +686,10 @@ bool StatelessWriter::send(
                    max_blocking_time_point);
 }
 
-bool StatelessWriter::deliver_sample(
+bool StatelessWriter::deliver_sample_nts(
         CacheChange_t* cache_change,
         const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time)
 {
-    std::lock_guard<RecursiveTimedMutex> guard(mp_mutex);
     NetworkFactory& network = mp_RTPSParticipant->network_factory();
     size_t num_locators = locator_selector_.selected_size() + fixed_locators_.size();
     uint64_t change_sequence_number = cache_change->sequenceNumber.to64long();
@@ -773,7 +772,8 @@ bool StatelessWriter::deliver_sample(
             }
         }
 
-        on_sample_datas(cache_change->write_params.sample_identity(), cache_change->writer_info.num_sent_submessages);
+        on_sample_datas(cache_change->write_params.sample_identity(),
+                cache_change->writer_info.num_sent_submessages);
 
     }
     catch (const RTPSMessageGroup::timeout&)

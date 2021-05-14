@@ -43,9 +43,11 @@ struct CacheChangeWriterInfo_t
     //!Number of DATA / DATA_FRAG submessages sent to the transport (only used in Writers)
     size_t num_sent_submessages = 0;
     //! Used to link with previous node in a list. Used by FlowControllerImpl.
-    CacheChange_t* previous_ = nullptr;
+    //! Cannot be cached because there are several comparisons without locking.
+    CacheChange_t* volatile previous = nullptr;
     //! Used to link with next node in a list. Used by FlowControllerImpl.
-    CacheChange_t* next_ = nullptr;
+    //! Cannot be cached because there are several comparisons without locking.
+    CacheChange_t* volatile next = nullptr;
 };
 
 /*!

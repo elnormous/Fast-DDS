@@ -10,7 +10,12 @@ constexpr char* const sync_flow_congtroller_name = "SyncFlowController";
 
 FlowControllerFactory::~FlowControllerFactory()
 {
-    delete flow_controllers_[pure_sync_flow_congtroller_name];
+    std::for_each(flow_controllers_.begin(), flow_controllers_.end(),
+            [](const std::pair<std::string, FlowController*>& flow_controller)
+            {
+                delete flow_controller.second;
+            });
+    flow_controllers_.clear();
 }
 
 void FlowControllerFactory::init()
