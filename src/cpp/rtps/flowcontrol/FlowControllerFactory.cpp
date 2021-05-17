@@ -5,8 +5,9 @@ namespace eprosima {
 namespace fastdds {
 namespace rtps {
 
-constexpr char* const pure_sync_flow_congtroller_name = "PureSyncFlowController";
-constexpr char* const sync_flow_congtroller_name = "SyncFlowController";
+constexpr char* const pure_sync_flow_controller_name = "PureSyncFlowController";
+constexpr char* const sync_flow_controller_name = "SyncFlowController";
+constexpr char* const async_flow_controller_name = "AsyncFlowController";
 
 FlowControllerFactory::~FlowControllerFactory()
 {
@@ -23,11 +24,14 @@ void FlowControllerFactory::init()
     // Create default flow controllers.
 
     // PureSyncFlowController -> used by volatile besteffort writers.
-    flow_controllers_.insert({pure_sync_flow_congtroller_name,
+    flow_controllers_.insert({pure_sync_flow_controller_name,
                               new FlowControllerImpl<FlowControllerPureSyncPublishMode, FlowControllerFifoSchedule>()});
     // SyncFlowController -> used by rest of besteffort writers.
-    flow_controllers_.insert({sync_flow_congtroller_name,
+    flow_controllers_.insert({sync_flow_controller_name,
                               new FlowControllerImpl<FlowControllerSyncPublishMode, FlowControllerFifoSchedule>()});
+    // AsyncFlowController
+    flow_controllers_.insert({async_flow_controller_name,
+                              new FlowControllerImpl<FlowControllerAsyncPublishMode, FlowControllerFifoSchedule>()});
 }
 
 void FlowControllerFactory::register_flow_controller (
@@ -57,12 +61,19 @@ FlowController* FlowControllerFactory::retrieve_flow_controller(
             if (fastrtps::rtps::BEST_EFFORT == writer_attributes.endpoint.reliabilityKind &&
                     fastrtps::rtps::VOLATILE == writer_attributes.endpoint.durabilityKind)
             {
-                returned_flow = flow_controllers_[pure_sync_flow_congtroller_name];
+                std::cout << "RETRIEVE PURE SYNC" << std::endl;
+                returned_flow = flow_controllers_[pure_sync_flow_controller_name];
             }
             else
             {
-                returned_flow = flow_controllers_[sync_flow_congtroller_name];
+                std::cout << "RETRIEVE SYNC" << std::endl;
+                returned_flow = flow_controllers_[sync_flow_controller_name];
             }
+        }
+        else
+        {
+            std::cout << "RETRIEVE ASYNC" << std::endl;
+            returned_flow = flow_controllers_[async_flow_controller_name];
         }
     }
 

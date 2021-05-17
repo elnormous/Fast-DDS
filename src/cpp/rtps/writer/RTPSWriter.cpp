@@ -186,6 +186,9 @@ CacheChange_t* RTPSWriter::new_change(
     }
     reserved_change->instanceHandle = handle;
     reserved_change->writerGUID = m_guid;
+    reserved_change->writer_info.previous = nullptr;
+    reserved_change->writer_info.next = nullptr;
+    reserved_change->writer_info.num_sent_submessages = 0;
     return reserved_change;
 }
 
@@ -210,6 +213,9 @@ CacheChange_t* RTPSWriter::new_change(
     }
     reserved_change->instanceHandle = handle;
     reserved_change->writerGUID = m_guid;
+    reserved_change->writer_info.previous = nullptr;
+    reserved_change->writer_info.next = nullptr;
+    reserved_change->writer_info.num_sent_submessages = 0;
     return reserved_change;
 }
 

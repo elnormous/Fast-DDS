@@ -50,6 +50,8 @@ class TimedEvent;
 class RTPSReader;
 class IDataSharingNotifier;
 
+//TODO  ChangeForReader_t needs the pointer to CacheChange_t now with new flow controllers?
+
 /**
  * ReaderProxy class that helps to keep the state of a specific Reader with respect to the RTPSWriter.
  * @ingroup WRITER_MODULE
@@ -229,15 +231,19 @@ public:
 
     /**
      * Turns all UNDERWAY changes into UNACKNOWLEDGED.
+     *
      * @return true if at least one change changed its status, false otherwise.
      */
     bool perform_nack_supression();
 
     /**
      * Turns all REQUESTED changes into UNSENT.
+     *
+     * @param func Function executed for each change which changes its status.
      * @return the number of changes that changed its status.
      */
-    uint32_t perform_acknack_response();
+    uint32_t perform_acknack_response(
+            std::function<void(ChangeForReader_t& change)> func);
 
     /**
      * Call this to inform a change was removed from history.
@@ -471,11 +477,13 @@ private:
      * Converts all changes with a given status to a different status.
      * @param previous Status to change.
      * @param next Status to adopt.
+     * @param func Function executed for each change which changes its status.
      * @return the number of changes that have been modified.
      */
     uint32_t convert_status_on_all_changes(
             ChangeForReaderStatus_t previous,
-            ChangeForReaderStatus_t next);
+            ChangeForReaderStatus_t next,
+            std::function<void(ChangeForReader_t& change)> func = {});
 
     /*!
      * @brief Adds requested fragments. These fragments will be sent in next NackResponseDelay.

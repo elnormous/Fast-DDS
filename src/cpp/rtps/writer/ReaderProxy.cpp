@@ -401,6 +401,7 @@ bool ReaderProxy::process_initial_acknack()
 {
     if (is_local_reader())
     {
+        //TODO Verify samples are added to flow controller
         return 0 != convert_status_on_all_changes(UNACKNOWLEDGED, UNSENT);
     }
 
@@ -501,14 +502,16 @@ bool ReaderProxy::perform_nack_supression()
     return 0 != convert_status_on_all_changes(UNDERWAY, UNACKNOWLEDGED);
 }
 
-uint32_t ReaderProxy::perform_acknack_response()
+uint32_t ReaderProxy::perform_acknack_response(
+        std::function<void(ChangeForReader_t& change)> func)
 {
-    return convert_status_on_all_changes(REQUESTED, UNSENT);
+    return convert_status_on_all_changes(REQUESTED, UNSENT, func);
 }
 
 uint32_t ReaderProxy::convert_status_on_all_changes(
         ChangeForReaderStatus_t previous,
-        ChangeForReaderStatus_t next)
+        ChangeForReaderStatus_t next,
+        std::function<void(ChangeForReader_t& change)> func)
 {
     assert(previous > next);
 
@@ -522,6 +525,11 @@ uint32_t ReaderProxy::convert_status_on_all_changes(
         {
             ++changed;
             change.setStatus(next);
+
+            if (func)
+            {
+                func(change);
+            }
         }
     }
 

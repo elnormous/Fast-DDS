@@ -33,8 +33,15 @@ struct FlowControllerAsyncPublishMode
 
     virtual ~FlowControllerAsyncPublishMode()
     {
-        running = false;
-        thread.join();
+        if (running)
+        {
+            std::unique_lock<std::mutex> lock(changes_interested_mutex);
+            assert(&tailinterested == headinterested.writer_info.next);
+            running = false;
+            cv.notify_one();
+            changes_interested_mutex.unlock();
+            thread.join();
+        }
     }
 
     std::thread thread;
@@ -264,7 +271,6 @@ private:
             change->writer_info.next = &async_mode.tailinterested;
 
             async_mode.cv.notify_one();
-            std::cout << "ADDED" << std::endl; //TODO Remove
 
             return true;
         }
@@ -308,9 +314,11 @@ private:
             std::unique_lock<std::mutex> lock(mutex_);
             std::unique_lock<std::mutex> interested_lock(async_mode.changes_interested_mutex);
 
-            // When blocked, both pointer are different than nullptr.
-            assert(nullptr != change->writer_info.previous &&
-                    nullptr != change->writer_info.next);
+            // When blocked, both pointer are different than nullptr or equal.
+            assert((nullptr != change->writer_info.previous &&
+                    nullptr != change->writer_info.next) ||
+                    (nullptr == change->writer_info.previous &&
+                    nullptr == change->writer_info.next));
 
             // Try to join previous node and next node.
             change->writer_info.previous->writer_info.next = change->writer_info.next;
@@ -347,7 +355,26 @@ private:
 
             std::unique_lock<std::mutex> lock(mutex_);
 
-            add_interested_changes_to_queue_nts();
+            //Check if we have to sleep.
+            {
+                bool queue_empty =  &async_mode.tail == async_mode.head.writer_info.next;
+                std::unique_lock<std::mutex> in_lock(async_mode.changes_interested_mutex);
+                // Add interested changes into the queue.
+                bool new_ones = add_interested_changes_to_queue_nts();
+
+                while (queue_empty && !new_ones && async_mode.running)
+                {
+                    lock.unlock();
+                    async_mode.cv.wait(in_lock);
+
+                    in_lock.unlock();
+                    lock.lock();
+                    in_lock.lock();
+
+                    queue_empty =  &async_mode.tail == async_mode.head.writer_info.next;
+                    new_ones = add_interested_changes_to_queue_nts();
+                }
+            }
 
             while (&async_mode.tail != async_mode.head.writer_info.next)
             {
@@ -385,6 +412,7 @@ private:
                 }
 
                 // Add interested changes into the queue.
+                std::unique_lock<std::mutex> lock(async_mode.changes_interested_mutex);
                 add_interested_changes_to_queue_nts();
             }
         }
@@ -412,14 +440,15 @@ private:
     /*!
      * Store the sample at the end of the list
      * when SampleScheduling == FlowControllerFifoSchedule.
+     *
+     * @return true if there is added changes.
      */
     template<typename Scheculing = SampleScheduling>
-    typename std::enable_if<std::is_same<FlowControllerFifoSchedule, Scheculing>::value, void>::type
+    typename std::enable_if<std::is_same<FlowControllerFifoSchedule, Scheculing>::value, bool>::type
     add_interested_changes_to_queue_nts()
     {
-        // This function should be called with mutex_ locked, because the queue is changed.
-
-        std::unique_lock<std::mutex> lock(async_mode.changes_interested_mutex);
+        // This function should be called with mutex_  and interested_lock locked, because the queue is changed.
+        bool returned_value = false;
 
         // TODO Remember with best effor this is not work if is transient local adding 1,2,3 and 3 is in the queue.
         fastrtps::rtps::CacheChange_t* interested_it = async_mode.headinterested.writer_info.next;
@@ -435,7 +464,10 @@ private:
             interested_it->writer_info.next = &async_mode.tail;
 
             interested_it = next_it;
+            returned_value = true;
         }
+
+        return returned_value;
     }
 
     std::mutex mutex_;

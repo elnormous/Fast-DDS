@@ -429,11 +429,15 @@ private:
             SequenceNumber_t max_sequence,
             bool& activateHeartbeatPeriod);
 
-    void send_all_intraprocess_changes(
-            SequenceNumber_t max_sequence);
+    void deliver_sample_to_intraprocesses(
+            CacheChange_t* change);
 
-    void send_all_datasharing_changes(
-            SequenceNumber_t max_sequence);
+    void deliver_sample_to_datasharing(
+            CacheChange_t* change);
+
+    void deliver_sample_to_network(
+            CacheChange_t* change,
+            const std::chrono::time_point<std::chrono::steady_clock>& max_blocking_time);
 
     void send_all_unsent_changes(
             SequenceNumber_t max_sequence,

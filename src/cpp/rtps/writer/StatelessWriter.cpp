@@ -20,6 +20,7 @@
 #include <fastdds/rtps/writer/StatelessWriter.h>
 #include <fastdds/rtps/writer/WriterListener.h>
 #include <fastdds/rtps/history/WriterHistory.h>
+//TODO Review usage of async thread.
 #include <fastdds/rtps/resources/AsyncWriterThread.h>
 #include <rtps/participant/RTPSParticipantImpl.h>
 #include <rtps/flowcontrol/FlowController.h>
