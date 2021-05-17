@@ -305,9 +305,6 @@ public:
     void updateTimes(
             const WriterTimes& times);
 
-    void add_flow_controller(
-            std::unique_ptr<FlowController> controller) override;
-
     SequenceNumber_t next_sequence_number() const;
 
     /**

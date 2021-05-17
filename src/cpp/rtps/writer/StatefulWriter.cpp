@@ -2083,12 +2083,6 @@ void StatefulWriter::updateTimes(
     m_times = times;
 }
 
-void StatefulWriter::add_flow_controller(
-        std::unique_ptr<FlowController> controller)
-{
-    m_controllers.push_back(std::move(controller));
-}
-
 SequenceNumber_t StatefulWriter::next_sequence_number() const
 {
     return mp_history->next_sequence_number();

@@ -280,13 +280,6 @@ public:
             const std::chrono::steady_clock::time_point& max_blocking_time_point,
             std::unique_lock<RecursiveTimedMutex>& lock) = 0;
 
-    /*
-     * Add a flow controller that will apply to this writer exclusively.
-     * @param controller
-     */
-    virtual void add_flow_controller(
-            std::unique_ptr<FlowController> controller) = 0;
-
 #ifdef FASTDDS_STATISTICS
 
     /*

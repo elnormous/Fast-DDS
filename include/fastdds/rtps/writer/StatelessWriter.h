@@ -157,9 +157,6 @@ public:
             const std::chrono::steady_clock::time_point& max_blocking_time_point,
             std::unique_lock<RecursiveTimedMutex>& lock) override;
 
-    void add_flow_controller(
-            std::unique_ptr<FlowController> controller) override;
-
     /**
      * Send a message through this interface.
      *
@@ -221,7 +218,6 @@ private:
     bool ignore_fixed_locators_ = false;
 
     std::condition_variable_any unsent_changes_cond_;
-    std::vector<std::unique_ptr<FlowController>> flow_controllers_;
     uint64_t first_seq_for_all_readers_ = 0;
     uint64_t last_sequence_number_sent_ = 0;
     ResourceLimitedVector<std::unique_ptr<ReaderLocator>> matched_local_readers_;

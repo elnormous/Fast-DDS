@@ -20,8 +20,6 @@
 #include <fastdds/rtps/writer/StatelessWriter.h>
 #include <fastdds/rtps/writer/WriterListener.h>
 #include <fastdds/rtps/history/WriterHistory.h>
-//TODO Review usage of async thread.
-#include <fastdds/rtps/resources/AsyncWriterThread.h>
 #include <rtps/participant/RTPSParticipantImpl.h>
 #include <rtps/flowcontrol/FlowController.h>
 #include <rtps/history/HistoryAttributesExtension.hpp>
@@ -215,17 +213,6 @@ void StatelessWriter::init(
 StatelessWriter::~StatelessWriter()
 {
     logInfo(RTPS_WRITER, "StatelessWriter destructor"; );
-
-    for (std::unique_ptr<FlowController>& controller : flow_controllers_)
-    {
-        controller->disable();
-    }
-
-    mp_RTPSParticipant->async_thread().unregister_writer(this);
-
-    // After unregistering writer from AsyncWriterThread, delete all flow_controllers because they register the writer in
-    // the AsyncWriterThread.
-    flow_controllers_.clear();
 
     // TOODO [ILG] Shold we force this on all cases?
     if (is_datasharing_compatible())
@@ -663,12 +650,6 @@ void StatelessWriter::unsent_changes_reset()
             {
                 flow_controller_->add_old_sample(this, change);
             });
-}
-
-void StatelessWriter::add_flow_controller(
-        std::unique_ptr<FlowController> controller)
-{
-    flow_controllers_.push_back(std::move(controller));
 }
 
 bool StatelessWriter::send(
